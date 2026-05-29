@@ -9,12 +9,17 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  sessions  Session[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  role        String    @default("STUDENT") // "TEACHER" or "STUDENT"
+  
+  sessions    Session[]
+  courses     Course[]           @relation("TeacherCourses")
+  enrollments CourseEnrollment[]
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Session {
@@ -54,4 +59,98 @@ model Session {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  inviteCode  String   @unique
+  
+  teacherId   String
+  teacher     User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+  
+  enrollments CourseEnrollment[]
+  materials   CourseMaterial[]
+  topics      CourseTopic[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CourseEnrollment {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([studentId, courseId])
+}
+
+model CourseMaterial {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  title     String
+  fileUrl   String
+  fileType  String
+  
+  createdAt DateTime @default(now())
+}
+
+model CourseTopic {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?
+  
+  progresses  TopicProgress[]
+  gaps        TopicKnowledgeGap[]
+  
+  createdAt   DateTime @default(now())
+}
+
+model TopicKnowledgeGap {
+  id             String   @id @default(cuid())
+  topicId        String
+  studentId      String
+  
+  topic          CourseTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  gapDescription String
+  isAIIdentified Boolean  @default(false)
+  status         String   @default("OPEN") // "OPEN", "RESOLVED"
+  
+  createdAt      DateTime @default(now())
+}
+
+model TopicProgress {
+  id             String   @id @default(cuid())
+  topicId        String
+  studentId      String
+  
+  topic          CourseTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  
+  // Interactions
+  smartNotes     String?
+  flashcards     String?
+  quizState      String?
+  chatHistory    String?
+  
+  // Progress metrics
+  notesProgress      Int      @default(0)
+  flashcardsProgress Int      @default(0)
+  quizScore          Int      @default(0)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([studentId, topicId])
 }

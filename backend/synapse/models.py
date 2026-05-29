@@ -175,3 +175,27 @@ class CoordinatorRequest(BaseModel):
     student_id: str
     message: str
     profile: LearningProfile = Field(default_factory=LearningProfile)
+
+
+# ── Student API request/response shapes ────────────────────────────────────────
+
+class StudentJoinRequest(BaseModel):
+    invite_code: str
+    student_id: str
+
+
+class GapAssessmentRequest(BaseModel):
+    student_id: str
+    topic_id: str
+    mode: Literal["manual", "ai"]
+    manual_level: Literal["new", "no_clue"] | None = None
+
+
+class TopicQuizRequest(BaseModel):
+    student_id: str
+    topic_id: str
+
+
+class TopicQuizResult(BaseModel):
+    score: int
+    feedback: str

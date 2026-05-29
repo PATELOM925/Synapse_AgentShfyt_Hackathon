@@ -33,7 +33,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from synapse.agents.lifecycle import close_synapse_app, get_synapse_app
-from synapse.routers import assess, diagnose, knowledge_map, memory, notes, tutor
+from synapse.routers import assess, diagnose, knowledge_map, memory, notes, tutor, student
 
 
 @asynccontextmanager
@@ -69,6 +69,7 @@ app.include_router(assess.router)
 app.include_router(notes.router)
 app.include_router(knowledge_map.router)
 app.include_router(memory.router)
+app.include_router(student.router)
 
 
 @app.get("/health")
