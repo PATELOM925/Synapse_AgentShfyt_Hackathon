@@ -33,14 +33,39 @@ class SynapseApp:
     async def initialize(self):
         if self._initialized:
             return
-        self._lifecycle = get_lifecycle_manager(fail_on_unhealthy=False, verify_connections=True, enable_signal_handlers=False)
+            
+        # Connect Prisma DB
+        from synapse.db.client import get_client
+        try:
+            await get_client().connect()
+            logger.info("Prisma DB connected successfully.")
+        except Exception as e:
+            logger.error(f"Failed to connect Prisma DB: {e}")
+            
+        self._lifecycle = get_lifecycle_manager(fail_on_unhealthy=False, verify_connections=False, enable_signal_handlers=False)
         await self._lifecycle.initialize()
         self._container = get_container()
-        self._mcp_server = MCPServerStreamableHttp(params={"url": KB_MCP_URL}, client_session_timeout_seconds=60)
-        await self._mcp_server.connect()
-        self._tool_executor = ToolExecutor({self._mcp_server: None})
-        await self._tool_executor.initialize()
-        self._tools = self._tool_executor.get_tool_definitions()
+
+        enable_mcp = os.environ.get("SYNAPSE_ENABLE_MCP", "1").strip().lower() not in {
+            "0", "false", "off", "no"
+        }
+
+        if enable_mcp:
+            self._mcp_server = MCPServerStreamableHttp(params={"url": KB_MCP_URL}, client_session_timeout_seconds=60)
+            try:
+                await self._mcp_server.connect()
+                self._tool_executor = ToolExecutor({self._mcp_server: None})
+                await self._tool_executor.initialize()
+                self._tools = self._tool_executor.get_tool_definitions()
+            except Exception as exc:
+                logger.error("MCP server unavailable at %s; continuing without KB tools: %s", KB_MCP_URL, exc)
+                self._mcp_server = None
+
+        if not enable_mcp or self._mcp_server is None:
+            self._tool_executor = ToolExecutor({})
+            await self._tool_executor.initialize()
+            self._tools = []
+
         self._runner = AgentRunner(
             container=self._container,
             tool_executor=self._tool_executor,
@@ -82,6 +107,12 @@ class SynapseApp:
             except Exception: pass
         if self._lifecycle:
             await self._lifecycle.shutdown()
+            
+        from synapse.db.client import get_client
+        try:
+            await get_client().disconnect()
+        except Exception: pass
+            
         self._initialized = False
 
 

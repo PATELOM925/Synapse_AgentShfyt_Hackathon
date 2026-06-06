@@ -73,6 +73,36 @@ Based on the prompt, this pass adds
    - verify enrollments before duplicate invite creation
 5. Add API docs/Swagger tags and tests for the new routes.
 
+## Live run blockers (build branch, 2026-05-30)
+
+### 1) Backend startup hard-fail on missing KB MCP
+- ✅ Fixed in code: `api/synapse/agents/lifecycle.py` now continues if MCP is unavailable and initializes with 0 tools.
+- Added graceful env toggle `SYNAPSE_ENABLE_MCP` (default: enabled).
+
+### 2) Supabase schema / tables missing
+- `students` / `teachers` / `classrooms` tables currently absent in the new project.
+- Repro: `POST /student/auth/register` returns `PGRST205 Could not find the table 'public.students' in the schema cache`.
+- Need schema migration before routes work.
+
+### 3) DB DNS/connectivity mismatch for this environment
+- `db.xlteihusobpeuvintrcq.supabase.co` does not resolve in local DNS here.
+- Pooler hostname resolves, but tenant/user credentials from provided host/format did not authenticate.
+- Impact: cannot apply migrations from CLI/python directly in this environment until verified DB host/user pair is corrected.
+
+## Current local runnable state
+- API runs on **http://127.0.0.1:8000**
+- API docs: **http://127.0.0.1:8000/docs**
+- Frontend currently running on **http://127.0.0.1:3000**
+
+## Immediate next command sequence
+1. Confirm Supabase service-role key and correct PostgreSQL DSN/tenant user.
+2. Run migrations in order:
+   - `001_student_tables.sql`
+   - `002_teacher_tables.sql`
+   - `003_classroom_invites_and_materials.sql`
+   - `003_student_additions.sql`
+3. Re-run: `curl http://127.0.0.1:8000/student/auth/register` smoke test after `POST`.
+
 ## Build commands
 - Apply migration 003 after 001/002 in local Postgres/Supabase.
 - Start backend: `uvicorn synapse.app:app --port 8000 --reload`

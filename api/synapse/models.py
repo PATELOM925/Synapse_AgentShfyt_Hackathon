@@ -268,6 +268,7 @@ class Classroom(BaseModel):
     name: str
     description: str = ""
     topics: list[str] = Field(default_factory=list)
+    join_code: str | None = None
 
 
 class Enrollment(BaseModel):
@@ -280,6 +281,7 @@ class ClassroomCreate(BaseModel):
     name: str
     description: str = ""
     topics: list[str] = Field(default_factory=list)
+    join_code: str | None = None
 
 
 class SyllabusUpload(BaseModel):

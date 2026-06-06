@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { teacherApi, studentApi } from "@/lib/synapseApi";
 import {
   BookOpenText, Check, ChevronDown, ChevronUp, Copy, FileText, GraduationCap,
   Layers, Mic, Network, Paperclip, Sparkles, TrendingUp, Users, Volume2, X, Zap,
@@ -148,6 +149,19 @@ export default function TeacherDashboard() {
   const [published, setPublished] = useState(true);
   const [topic, setTopic] = useState("Photosynthesis & the Light-Dependent Reactions");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Automatically provision the demo class in the backend so students can join it
+    teacherApi.createClass("teacher-001", MOCK_CLASS.name, MOCK_CLASS.subject, [topic], MOCK_CLASS.code).catch(() => {});
+  }, [topic]);
+
+  const handlePublish = async () => {
+    setPublished((v) => !v);
+    if (!published) {
+      // Trigger material generation (flashcards, notes, podcast) for the student!
+      studentApi.generateMaterials("demo-student-001", [topic]).catch(console.error);
+    }
+  };
 
   const toggleMode = (id: string) => {
     setEnabledModes((prev) =>
@@ -371,7 +385,7 @@ export default function TeacherDashboard() {
                     </button>
                   </div>
                   <button
-                    onClick={() => setPublished((v) => !v)}
+                    onClick={handlePublish}
                     className="flex h-10 items-center gap-2 rounded-full bg-[#0066cc] px-5 text-[14px] font-medium text-white transition-all duration-150 hover:bg-[#0071e3] active:scale-[0.97]"
                   >
                     <Sparkles className="size-3.5" strokeWidth={1.8} />

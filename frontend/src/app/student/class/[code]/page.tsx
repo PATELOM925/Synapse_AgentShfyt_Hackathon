@@ -385,7 +385,14 @@ export default function StudentClassPage({ params }: { params: Promise<{ code: s
                         <Volume2 className="size-9 text-[#10b981]" strokeWidth={1.5} />
                       </div>
                       <h3 className="text-[22px] font-semibold tracking-[-0.02em]">Audio Summary</h3>
-                      <p className="mt-2 max-w-[32ch] text-[15px] text-[#6e6e73]">Audio generation coming soon.</p>
+                      <p className="mt-2 mb-6 max-w-[32ch] text-[15px] text-[#6e6e73]">Listen to the AI-generated podcast summary.</p>
+                      <audio 
+                        controls 
+                        src={`/audio/${currentTopic.replace(/ /g, '_').toLowerCase()}.mp3`}
+                        className="w-full max-w-md"
+                      >
+                        Your browser does not support the audio element.
+                      </audio>
                     </div>
                   )}
                   {activeMode === "visual" && (

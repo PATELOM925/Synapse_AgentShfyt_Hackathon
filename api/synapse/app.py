@@ -12,8 +12,8 @@ import os, sys
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"), override=True)
-
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"), override=True)
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env.local"), override=True)
 _CONTINUUM_SRC = os.path.join(os.path.dirname(__file__), "..", "..", "continuum", "src")
 if os.path.isdir(_CONTINUUM_SRC) and _CONTINUUM_SRC not in sys.path:
     sys.path.insert(0, _CONTINUUM_SRC)

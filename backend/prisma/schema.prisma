@@ -3,6 +3,11 @@ generator client {
   previewFeatures = ["driverAdapters"]
 }
 
+generator client_python {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -54,4 +59,182 @@ model Session {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Student {
+  id         String   @id // e.g. from clerk or gen_random_uuid
+  email      String?  @unique
+  name       String   @default("")
+  teacherId  String?
+  teacher    Teacher? @relation(fields: [teacherId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  knowledgeMaps  KnowledgeMap[]
+  quizSessions   QuizSession[]
+  assessments    Assessment[]
+  gradeReports   GradeReport[]
+  notes          StudentNote[]
+  flashcards     Flashcard[]
+  enrollments    Enrollment[]
+  invitations    ClassroomInvitation[]
+}
+
+model Teacher {
+  id          String   @id
+  email       String   @unique
+  name        String   @default("")
+  institution String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  students    Student[]
+  classrooms  Classroom[]
+  syllabi     Syllabus[]
+  invitations ClassroomInvitation[]
+  materials   ClassroomMaterial[]
+}
+
+model KnowledgeMap {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topics         String   @default("[]") // stored as JSON string
+  overallMastery Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model QuizSession {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topics      String   @default("[]") // Stringified JSON array of topics
+  quiz        String   // Stringified JSON
+  createdAt   DateTime @default(now())
+}
+
+model Assessment {
+  id          String   @id
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic       String
+  questions   String   @default("[]") // Stringified JSON
+  createdAt   DateTime @default(now())
+
+  gradeReports GradeReport[]
+}
+
+model GradeReport {
+  id            String     @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic         String
+  score         Float
+  perQuestion   String     @default("[]") // JSON string
+  updatedStatus String     // JSON string
+  createdAt     DateTime   @default(now())
+}
+
+model StudentNote {
+  id           String   @id @default(uuid())
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic        String
+  summary      String   @default("")
+  sections     String   @default("[]") // JSON string
+  keyConcepts  String   @default("[]") // stringified array
+  sources      String   @default("[]") // JSON string
+  createdAt    DateTime @default(now())
+}
+
+model Flashcard {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic      String
+  cards      String   @default("[]") // JSON string
+  createdAt  DateTime @default(now())
+}
+
+model Classroom {
+  id          String   @id @default(uuid())
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @default("")
+  topics      String   @default("[]") // JSON string
+  joinCode    String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments   Enrollment[]
+  syllabi       Syllabus[]
+  snapshots     CohortSnapshot[]
+  invitations   ClassroomInvitation[]
+  materials     ClassroomMaterial[]
+}
+
+model Enrollment {
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrolledAt  DateTime  @default(now())
+
+  @@id([classroomId, studentId])
+}
+
+model Syllabus {
+  id          String    @id @default(uuid())
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  topics      String    @default("[]") // JSON string
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+}
+
+model CohortSnapshot {
+  id               String    @id @default(uuid())
+  classroomId      String
+  classroom        Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  totalStudents    Int       @default(0)
+  avgMastery       Float     @default(0.0)
+  topicBreakdown   String    @default("[]") // JSON string
+  strugglingTopics String    @default("[]") // JSON string
+  createdAt        DateTime  @default(now())
+}
+
+model ClassroomInvitation {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  status      String    @default("pending") // pending, accepted, revoked
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+
+  @@unique([classroomId, studentId])
+}
+
+model ClassroomMaterial {
+  id          String    @id @default(uuid())
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  materialUrl String
+  contentType String    @default("application/pdf")
+  description String    @default("")
+  createdAt   DateTime  @default(now())
 }

@@ -20,6 +20,7 @@ from orchestrator.agent.types import MergeStrategy, FailStrategy
 from synapse.agents.lifecycle import SynapseApp
 from synapse.agents.notes import generate_notes
 from synapse.agents.flashcards import generate_flashcards
+from synapse.agents.podcast import generate_podcast
 from synapse.db.student.queries import save_notes, save_flashcards
 
 logger = get_logger(__name__)
@@ -72,8 +73,17 @@ async def _scatter_one_topic(app: SynapseApp, student_id: str, topic: str) -> di
     )
 
     try:
-        result = await app.runner.run(agent=scatter, input=f"Study materials for: {topic}", user_id=student_id)
-        raw = result.content or "{}"
+        scatter_task = app.runner.run(agent=scatter, input=f"Study materials for: {topic}", user_id=student_id)
+        podcast_task = generate_podcast(app, student_id, topic)
+        
+        result, podcast_res = await asyncio.gather(scatter_task, podcast_task, return_exceptions=True)
+        
+        raw = "{}"
+        if not isinstance(result, Exception):
+            raw = result.content or "{}"
+        else:
+            logger.error("Scatter failed for topic %s: %s", topic, result)
+            
         # STRUCTURED merge returns JSON dict keyed by agent name
         try:
             parts = json.loads(raw)
@@ -100,7 +110,7 @@ async def _scatter_one_topic(app: SynapseApp, student_id: str, topic: str) -> di
         except Exception as e:
             logger.warning("Flashcards parse failed for %s: %s", topic, e)
 
-        return {"topic": topic, "notes": notes_data, "flashcards": fc_data}
+        return {"topic": topic, "notes": notes_data, "flashcards": fc_data, "podcast": podcast_res if not isinstance(podcast_res, Exception) else None}
     except Exception as e:
         logger.error("Scatter failed for topic %s: %s", topic, e)
         return {"topic": topic, "notes": None, "flashcards": None, "error": str(e)}

@@ -260,8 +260,8 @@ export const teacherApi = {
   getProfile: (teacherId: string) =>
     get(`/teacher/auth/${teacherId}`),
 
-  createClass: (teacherId: string, name: string, description = "", topics: string[] = []) =>
-    post("/teacher/classes/", { teacher_id: teacherId, name, description, topics }),
+  createClass: (teacherId: string, name: string, description = "", topics: string[] = [], joinCode?: string) =>
+    post("/teacher/classes/", { teacher_id: teacherId, name, description, topics, join_code: joinCode }),
 
   listClasses: (teacherId: string) =>
     get<{ classrooms: unknown[] }>(`/teacher/classes/${teacherId}/all`),
